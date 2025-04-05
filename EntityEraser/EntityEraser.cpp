@@ -4,6 +4,7 @@
 #include "pch.h"
 #include "framework.h"
 #include "EntityEraser.h"
+#include<thread>
 using namespace std;
 JNIEXPORT jint JNICALL Java_apphhzp_lib_natives_NativeUtil_postMsg(JNIEnv* env, jclass obj, jlong hWnd, jint msg, jlong wParam, jlong lParam) {
 	return PostMessage((HWND)hWnd, msg, wParam, lParam);
@@ -770,7 +771,45 @@ JNIEXPORT void JNICALL Java_apphhzp_lib_instrumentation_ObjectInstrumentationImp
 }
 //================================================Field Agent END===================================================
 
-JNIEXPORT jclass JNICALL Java_apphhzp_lib_natives_NativeUtil_defineClass(JNIEnv* env, jclass cls, jobject loader, jclass lookup, jstring name, jbyteArray data, jint offset, jint length, jobject pd, jboolean initialize, jint flags, jobject classData) {
-    
-}
+void do_job(JavaVM* g_vm,jobject func,char* name) {
+    JNIEnv* env=NULL;
+    int ret;
 
+    JavaVMAttachArgs args;
+    args.version = JNI_VERSION_1_8;
+   
+    args.name = name;//给线程起个名字吧，这样在调试或者崩溃的时候能显示出名字，而不是thead-1,thread-2这样的名字。
+    args.group = NULL;//java.lang.ThreadGroup的全局引用，作用你懂的。
+
+    //调用AttachCurrentThread，将当前线程附加到虚拟机，附加成功后，将会返回JNIEnv
+    ret = g_vm->AttachCurrentThread((void**)&env,&args);
+    if (ret!=JNI_OK)
+    {
+        MessageBox(NULL, L"Could not create a new thread!", L"apphhzpLIB ERR", MB_ICONERROR);
+        return;
+    }
+    jclass klass = env->GetObjectClass(func);
+    env->CallVoidMethod(func, env->GetMethodID(klass, "run", "()V"));
+
+    //从虚拟机分离线程
+    g_vm->DetachCurrentThread();
+    env->DeleteGlobalRef(func);
+    //env->DeleteGlobalRef(name);
+}
+JNIEXPORT void JNICALL Java_apphhzp_lib_natives_NativeUtil_createThread(JNIEnv* env,jclass cls,jobject function,jstring name){
+    JavaVM* vm = NULL;
+    env->GetJavaVM(&vm);
+    if (!vm)
+    {
+        MessageBox(NULL, TEXT("Could not get JavaVM* !"), TEXT("apphhzpLIB error"), MB_ICONERROR);
+        return;
+    }
+    function = env->NewGlobalRef(function);
+    ///name =(jstring) env->NewGlobalRef(name);
+    char* a =(char*) env->GetStringUTFChars(name, NULL);
+    thread* td = NULL;
+    td = new thread(do_job,vm,function,a);
+    td->detach();
+
+    //DO NOT FREE IT!
+}

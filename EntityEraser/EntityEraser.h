@@ -22,7 +22,7 @@ extern "C" {
 	(JNIEnv *, jclass, jclass);
 	JNIEXPORT jobject JNICALL Java_apphhzp_lib_natives_NativeUtil_createObjectInstrumentationImpl
 	(JNIEnv *, jclass);
-	JNIEXPORT jclass JNICALL Java_apphhzp_lib_natives_NativeUtil_defineClass(JNIEnv* env,jclass cls,jobject loader,jclass lookup,jstring name,jbyteArray data,jint offset,jint length,jobject pd,jboolean initialize,jint flags,jobject classData);
+	JNIEXPORT void JNICALL Java_apphhzp_lib_natives_NativeUtil_createThread(JNIEnv* env,jclass cls,jobject function,jstring name);
 #ifdef __cplusplus
 }
 #endif
